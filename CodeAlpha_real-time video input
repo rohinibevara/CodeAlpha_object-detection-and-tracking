@@ -1,0 +1,55 @@
+# music_ai_midi_to_audio.py
+
+import numpy as np
+import pickle
+from music21 import stream, note, chord, midi
+import pyfluidsynth
+
+# ----------------------------
+# 1️⃣ Load generated notes
+# ----------------------------
+# This assumes you already have 'notes.pkl' or generated sequence list
+with open('data/metadata/notes.pkl', 'rb') as f:
+    notes = pickle.load(f)
+
+# For demo, pick last 500 notes as generated sequence
+generated_sequence = notes[-500:]  # or replace with your actual generated sequence
+
+# ----------------------------
+# 2️⃣ Convert sequence to MIDI
+# ----------------------------
+print("Converting sequence to MIDI...")
+midi_stream = stream.Stream()
+for pattern in generated_sequence:
+    if '.' in pattern or pattern.isdigit():
+        chord_notes = [note.Note(int(n)) for n in pattern.split('.')]
+        midi_stream.append(chord.Chord(chord_notes))
+    else:
+        midi_stream.append(note.Note(pattern))
+
+midi_file = 'generated_music.mid'
+midi_stream.write('midi', fp=midi_file)
+print(f"MIDI saved as {midi_file}")
+
+# ----------------------------
+# 3️⃣ Convert MIDI to Audio
+# ----------------------------
+print("Converting MIDI to audio (WAV)...")
+
+# Initialize FluidSynth
+fs = pyfluidsynth.Synth()
+fs.start(driver="dsound")  # Windows driver. Use "alsa" on Linux or "coreaudio" on Mac
+
+# Load SoundFont (you need a .sf2 file, e.g., "FluidR3_GM.sf2")
+soundfont = "FluidR3_GM.sf2"
+if not os.path.exists(soundfont):
+    raise FileNotFoundError(f"SoundFont not found: {soundfont}")
+fs.sfload(soundfont)
+
+# Play MIDI and save as WAV
+fs.midi_file_play(midi_file)
+fs.write_audio_file('generated_music.wav')  # Save output audio
+fs.delete()
+
+print("Audio saved as generated_music.wav")
+print("✅ Done! Play generated_music.wav to listen to the AI music.")
